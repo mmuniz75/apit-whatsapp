@@ -15,7 +15,6 @@ const login = async (phone) => {
             return;
              
        let buffer;
-       let finished = false
        sulla.create(phone, (base64Qr, asciiQR) => {
                     console.log(asciiQR);
                     base64Qr = base64Qr.replace('data:image/png;base64,', '');
@@ -24,12 +23,22 @@ const login = async (phone) => {
                         refreshQR : 0
                     })
         .then(client => {
+                client.onStateChange((state) => {
+                    console.log(state);
+                    const conflits = [
+                                        sulla.SocketState.CONFLICT,
+                                        sulla.SocketState.UNPAIRED,
+                                        sulla.SocketState.UNLAUNCHED,
+                                      ];
+                    if (conflits.includes(state)) {
+                        removeSession(phone, client);
+                    }
+                });
                 clients[phone] = client
-                finished = true
             }    
         );
 
-        while(!buffer && !finished)            
+        while(!buffer)            
             await sleep(1000)
 
         return buffer;
@@ -44,23 +53,25 @@ const logout = async (phone) => {
        if(!client) 
             return;
        
-       await client.close();
-       delete clients[phone]
-       
-       await sleep(1000)
-       fs.rmdir('./' + phone, { recursive: true },(err) => {
-        if (err) {
-          console.error(err)
-          return
-        }
-      })
-
-       return;
+       removeSession(phone, client);
 
     }catch(e) {
         throw new Error(e.message);
     };
 };
+
+const removeSession = async(phone, client) => {
+    await client.close();
+    delete clients[phone]
+    await sleep(1000);
+    fs.rmdir('./' + phone, { recursive: true },(err) => {
+     if (err) {
+       console.error(err)
+       return
+     }
+    });
+}
+
 
 const send = async (phone,message,groups) => {
     try{
@@ -69,7 +80,6 @@ const send = async (phone,message,groups) => {
             throw new Error("403");
         else {
             await client.sendText(groups, message);
-            //client.close()    
         }    
     }catch(e) {
         throw new Error(e.message);
