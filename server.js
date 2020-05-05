@@ -31,9 +31,20 @@ app.post('/login', async (req, res) => {
     res.status(400).send(e);
 });
 
-app.post('/messengers', async (req, res) => {
+app.post('/logout', async (req, res) => {
   try{ 
-    response = await messengerService.send(req.header('phone'),req.body.message,req.body.groups);
+    messengerService.logout(req.header('phone'));
+    res.sendStatus(200);
+  }catch(e){
+    res.status(400).send({"error" :e.message});   
+  }
+}, (e) => {
+    res.status(400).send(e);
+});
+
+app.post('/messages', async (req, res) => {
+  try{ 
+    response = await messengerService.send(req.header('phone'),req.body.text,req.body.groups);
     res.sendStatus(200);
   }catch(e){
   if(e.message === '403')

@@ -8,7 +8,6 @@ const sleep = async(ms) => {
 }
 
 const login = async (phone) => {
-
     try{
 
        client = await getClient(phone);
@@ -34,16 +33,36 @@ const login = async (phone) => {
             await sleep(1000)
 
         return buffer;
+    }catch(e) {
+        throw new Error(e.message);
+    };
+};
+
+const logout = async (phone) => {
+    try{
+       client = await getClient(phone);
+       if(!client) 
+            return;
+       
+       await client.close();
+       delete clients[phone]
+       
+       await sleep(1000)
+       fs.rmdir('./' + phone, { recursive: true },(err) => {
+        if (err) {
+          console.error(err)
+          return
+        }
+      })
+
+       return;
 
     }catch(e) {
         throw new Error(e.message);
     };
-
 };
 
-
 const send = async (phone,message,groups) => {
-
     try{
         client = await getClient(phone);
         if(!client)
@@ -52,7 +71,6 @@ const send = async (phone,message,groups) => {
             await client.sendText(groups, message);
             //client.close()    
         }    
-          
     }catch(e) {
         throw new Error(e.message);
     };
@@ -76,4 +94,6 @@ const getClient = async (phone) => {
 }
 
 module.exports.login = login;
+module.exports.logout = logout;
 module.exports.send = send;
+
