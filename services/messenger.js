@@ -50,7 +50,7 @@ const send = async (phone,message,groups) => {
             throw new Error("403");
         else {
             await client.sendText(groups, message);
-            client.close()    
+            //client.close()    
         }    
           
     }catch(e) {
