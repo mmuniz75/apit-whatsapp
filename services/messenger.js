@@ -1,6 +1,20 @@
 const sulla = require('sulla');
 const fs = require('fs');
+/*
+process.on('exit', async (code) => {
+    console.log(`Closing whatsApp's sessions`);
+    
+    for(key in clients)
+        if(clients[key])
+            try{
+                await clients[key].close();
+                console.log(`${key} closed`)
+            }catch(err){
+                console.error(`Not possible close session ${key}`)
+            }
 
+});
+*/
 const clients = []
 
 const sleep = async(ms) => {
@@ -16,25 +30,13 @@ const login = async (phone) => {
              
        let buffer;
        sulla.create(phone, (base64Qr, asciiQR) => {
-                    console.log(asciiQR);
                     base64Qr = base64Qr.replace('data:image/png;base64,', '');
                     buffer =Buffer.from(base64Qr, 'base64');
-                    }, {
-                        refreshQR : 0
+                    },{
+                        refreshQR : 0,
                     })
-        .then(client => {
-                client.onStateChange((state) => {
-                    console.log(state);
-                    const conflits = [
-                                        sulla.SocketState.CONFLICT,
-                                        sulla.SocketState.UNPAIRED,
-                                        sulla.SocketState.UNLAUNCHED,
-                                      ];
-                    if (conflits.includes(state)) {
-                        removeSession(phone, client);
-                    }
-                });
-                clients[phone] = client
+        .then(async (client) =>  {
+                await client.close();
             }    
         );
 
@@ -46,6 +48,20 @@ const login = async (phone) => {
         throw new Error(e.message);
     };
 };
+
+const setClientEvent = (phone,client) =>  {
+    client.onStateChange((state) => {
+        console.log(state);
+        const conflits = [
+                            sulla.SocketState.CONFLICT,
+                            sulla.SocketState.UNPAIRED,
+                            sulla.SocketState.UNLAUNCHED,
+                          ];
+        if (conflits.includes(state)) {
+            removeSession(phone, client);
+        }
+    });
+}
 
 const logout = async (phone) => {
     try{
@@ -88,22 +104,24 @@ const send = async (phone,message,groups) => {
 
 const getClient = async (phone) => {
     let client = clients[phone];
-    let connected = true;
     if (!client) { 
-        if (fs.existsSync('./' + phone)) {
+        const session = './' + phone;
+        if (fs.existsSync(session)) {
+            const fileCash = session + '/Default/Service Worker/Database/MANIFEST-000001';
+            if (fs.existsSync(fileCash))
+                fs.unlinkSync(fileCash);
+                
             client = await sulla.create(phone);
+            //setClientEvent(phone,client);
             clients[phone] = client
-        }else
-            connected = false;    
-    }else {
-        if(await !client.isConnected)
-            connected = false;
+        }
     }
 
-    return connected?client:undefined;    
+    return client;    
 }
 
 module.exports.login = login;
 module.exports.logout = logout;
 module.exports.send = send;
+
 
