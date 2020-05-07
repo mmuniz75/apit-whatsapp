@@ -112,7 +112,7 @@ const getClient = async (phone) => {
                 fs.unlinkSync(fileCash);
                 
             client = await sulla.create(phone);
-            //setClientEvent(phone,client);
+            setClientEvent(phone,client);
             clients[phone] = client
         }
     }
